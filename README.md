@@ -32,7 +32,7 @@ You can adjust the disk space in the Vagrantfile (line 29). The minimum should b
 
 Download the repository via 
 
-`git clone https://github.com/CSPF-Founder/iva.git`
+`git clone https://github.com/CSPF-Founder/IVA-DS.git`
 
 Or you can download it as a zip file by clicking on `Code` in the top right and clicking `Download zip`.
 
