@@ -1,0 +1,134 @@
+package components
+
+import (
+	"github.com/CSPF-Founder/iva/panel/internal/sessions"
+	"github.com/CSPF-Founder/iva/panel/views/helpers"
+	"strconv"
+)
+
+templ HtmlHead(data *helpers.BaseData) {
+	<head>
+		<meta charset="utf-8"/>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<link rel="shortcut icon" href="/external/images/favicon.ico"/>
+		<link rel="stylesheet" href="/static/vendor/simplebar/css/simplebar.css"/>
+		<link rel="stylesheet" href="/static/css/vendors/simplebar.css"/>
+		<link rel="stylesheet" href="/static/css/js_datepicker.min.css"/>
+		<link href="/static/css/style.min.css" rel="stylesheet"/>
+		<link href={ helpers.AssetPath("scss/app.scss") } rel="stylesheet"/>
+		<link href="/static/vendor/@coreui/icons/css/free.min.css" rel="stylesheet"/>
+		<title>{ data.ProductTitle } - { data.Title }</title>
+		@templ.JSONScript("csrf-data", struct {
+			CSRFToken string
+			CSRFName  string
+		}{
+			CSRFToken: data.CSRFToken,
+			CSRFName:  data.CSRFName,
+		})
+		<script type="module" src={ helpers.AssetPath("app/main.js") }></script>
+	</head>
+}
+
+templ Header(productTitle string) {
+	<header class="header header-light bg-primary header-sticky mb-4">
+		<div class="container-fluid">
+			<h4 class="mx-auto text-white">{ productTitle }</h4>
+			<button
+				class="header-toggler px-md-0 me-md-3 d-md-none"
+				type="button"
+				onclick="coreui.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()"
+			>
+				<svg class="icon icon-lg">
+					<use xlink:href="/static/vendor/@coreui/icons/svg/free.svg#cil-menu"></use>
+				</svg>
+			</button>
+			<ul class="header-nav me-4">
+				<li class="nav-item dropdown d-flex align-items-center">
+					<a
+						class="nav-link py-0"
+						data-coreui-toggle="dropdown"
+						href="#"
+						role="button"
+						aria-haspopup="true"
+						aria-expanded="false"
+					>
+						<div class="avatar avatar-md">
+							<svg class=" avatar-img icon-xxl icon me-2">
+								<use xlink:href="/static/vendor/@coreui/icons/svg/free.svg#cil-user"></use>
+							</svg><span class="avatar-status bg-success"></span>
+						</div>
+					</a>
+					<div class="dropdown-menu dropdown-menu-end pt-0">
+						<!-- <a class="dropdown-item" href="/users/edit-personal-details">
+                                <svg class="icon me-2">
+                                    <use xlink:href="/static/vendor/@coreui/icons/svg/free.svg#cil-settings"></use>
+                                </svg> My Profile
+                            </a> -->
+						<a class="dropdown-item" href="/users/logout">
+							<svg class="icon me-2">
+								<use xlink:href="/static/vendor/@coreui/icons/svg/free.svg#cil-account-logout"></use>
+							</svg> Logout
+						</a>
+					</div>
+				</li>
+			</ul>
+		</div>
+	</header>
+}
+
+templ Footer(currentYear int, company string) {
+	<div class="mx-auto block display-block flex-row">
+		<footer class="page-footer font-small blue pt-4">
+			<p class="text-center">&copy; { strconv.Itoa(currentYear) } { company }. All Rights Reserved. </p>
+		</footer>
+	</div>
+}
+
+templ FooterScritps() {
+	<script src="/static/vendor/@coreui/coreui-pro/js/coreui.bundle.min.js"></script>
+	<script src="/static/vendor/simplebar/js/simplebar.min.js"></script>
+	<script src="/static/vendor/@coreui/utils/js/coreui-utils.js"></script>
+	<script src="/static/js/tooltips.js"></script>
+}
+
+templ AppMsgBox() {
+	<div id="app-msg-box" class="modal mt-5 pt-5" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header bg-primary text-white">
+					<h5 class="modal-title"></h5>
+					<button
+						type="button"
+						class="btn-close btn-close-white"
+						data-bs-dismiss="modal"
+						aria-label="Close"
+					></button>
+				</div>
+				<div class="modal-body">
+					<p></p>
+				</div>
+				<div class="modal-footer"></div>
+			</div>
+		</div>
+	</div>
+}
+
+func flashTypeToClass(msgType string, closable bool) string {
+	if closable {
+		return "alert-dismissible alert-" + msgType
+	} else {
+		return "alert-" + msgType
+	}
+}
+
+templ FlashMessage(flashes []sessions.SessionFlash) {
+	for _, item := range flashes {
+		<div class={ "flash-alert-message alert " + flashTypeToClass(item.Type, item.Closable) }>
+			if item.Closable {
+				<button class="btn-close" type="button" data-coreui-dismiss="alert" aria-label="Close"></button>
+			}
+			{ item.Message }
+		</div>
+	}
+}

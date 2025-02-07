@@ -1,0 +1,577 @@
+package alertspages
+
+import (
+	"fmt"
+	"github.com/CSPF-Founder/iva/panel/enums"
+	"github.com/CSPF-Founder/iva/panel/internal/services"
+	"github.com/CSPF-Founder/iva/panel/models/datamodels"
+	"github.com/CSPF-Founder/iva/panel/views/helpers"
+	"strconv"
+	"strings"
+)
+
+type alertsDivOpts struct {
+	isDS              bool
+	showFlagBtns      bool
+	showAddToBugTrack bool
+}
+
+type defaultEntryData struct {
+	DefaultRemediation                  string
+	NumberOfTARowsForDefaultRemediation int
+}
+
+type Vulnerability struct {
+	Critical          int
+	High              int
+	Medium            int
+	Low               int
+	Info              int
+	NoVulnerabilities int
+}
+
+type CommonResultData struct {
+	Target                              *datamodels.Target
+	CanRescan                           bool
+	ReportGenerated                     enums.TargetStatus
+	VulnerabilityStats                  Vulnerability
+	OverallCVSSScore                    float64
+	TotalAlerts                         int
+	TotalTargets                        int64
+	CVSSScoreByHost                     map[string]float64
+	DefaultRemediation                  string
+	NumberOfTARowsForDefaultRemediation int
+}
+
+func vulnDistribution(vulnStats Vulnerability) []int {
+	return []int{
+		vulnStats.Critical,
+		vulnStats.High,
+		vulnStats.Medium,
+		vulnStats.Low,
+		vulnStats.Info,
+	}
+}
+
+// CalculateTextAreaRow calculates the number of rows for a text area
+func calculateTextAreaRow(inputData string) int {
+	inputData = strings.TrimSpace(inputData)
+	lineCount := strings.Count(inputData, "\n")
+	lineCount += len(inputData) / 100
+	lineCount = lineCount / 100
+	return lineCount
+}
+
+templ commonHeader(data CommonResultData) {
+	<link href={ helpers.AssetPath("scss/scan_results.scss") } rel="stylesheet"/>
+	@templ.JSONScript("scan-results-meta", struct {
+		VulnDistribution []int
+	}{
+		VulnDistribution: vulnDistribution(data.VulnerabilityStats),
+	})
+}
+
+templ statsDiv(data CommonResultData) {
+	<div class="row mb-3 mx-auto" id="dashboard-chart-box1">
+		<div class="col-lg-3 col-md-6 mx-auto">
+			<div class="card h-100">
+				<div class="card-body">
+					<div class="d-flex justify-content-between">
+						<div>
+							<h5 class="mb-2">CVSS Score</h5>
+						</div>
+					</div>
+					<div class="chart-container">
+						<canvas id="cvss-score-gauge"></canvas>
+					</div>
+					<div class="mt-3 mx-auto text-center">
+						<span>Over all CVSS score: { strconv.FormatFloat(data.OverallCVSSScore, 'f', 1, 64) }</span>
+					</div>
+					<div class="mt-3">
+						<span>CVSS Range Reference:</span>
+						<div class="row small-font">
+							<div class="col-lg-6">Low</div>
+							<div class="col-lg-6 text-right">0-3.9</div>
+						</div>
+						<div class="row small-font">
+							<div class="col-lg-6">Medium</div>
+							<div class="col-lg-6 text-right">4.0-6.9</div>
+						</div>
+						<div class="row small-font">
+							<div class="col-lg-6">High</div>
+							<div class="col-lg-6 text-right">7.0-8.9</div>
+						</div>
+						<div class="row small-font">
+							<div class="col-lg-6">Critical</div>
+							<div class="col-lg-6 text-right">9.0-10.0</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col-lg-6 col-md-6 mx-auto">
+			<div class="card h-100">
+				<div class="card-body">
+					<div class="d-flex justify-content-between">
+						<div>
+							<h5 class="mb-2">Scan Details</h5>
+						</div>
+					</div>
+					<div class="mt-5 h6">
+						<div class="row mt-3">
+							<div class="col-lg-4">Target</div>
+							<div class="col-lg-8 text-right text-disabled">
+								{ data.Target.TargetAddress }
+							</div>
+						</div>
+						<div class="row mt-3">
+							<div class="col-lg-4">Scan Started Time</div>
+							<div class="col-lg-8 text-right text-disabled">
+								{ data.Target.ScanStartedTimeStr() }
+							</div>
+						</div>
+						<div class="row mt-3 pb-4 border-bottom">
+							<div class="col-lg-4">Scan Completed Time</div>
+							<div class="col-lg-8 text-right text-disabled">
+								{ data.Target.ScanCompletedTimeStr() }
+							</div>
+						</div>
+					</div>
+					<div class="row mt-3 border-bottom">
+						<div class="col-6">
+							<div class="border-start border-start-4 border-start-danger px-3 mb-3">
+								<small
+									class="text-disabled"
+								>Total Alerts</small>
+								<div class="fs-5 fw-semibold">
+									{ strconv.Itoa(data.TotalAlerts) }
+								</div>
+							</div>
+						</div>
+						<!-- /.col-->
+						<div class="col-6">
+							<div class="border-start border-start-4 border-start-info px-3 mb-3">
+								<small
+									class="text-disabled"
+								>Total Targets</small>
+								<div class="fs-5 fw-semibold">
+									{ strconv.FormatInt(data.TotalTargets,10) }
+								</div>
+							</div>
+						</div>
+						<!-- /.col-->
+					</div>
+					<!-- /.row-->
+				</div>
+			</div>
+		</div>
+		<div class="col-lg-3 col-md-6 mx-auto">
+			<div class="card h-100">
+				<div class="card-body">
+					<div class="d-flex justify-content-between">
+						<div>
+							<h5 class="mb-2">Vulnerabilities count</h5>
+						</div>
+					</div>
+					<div class="chart-container">
+						<canvas id="alerts-distro-chart"></canvas>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+func canShowMarkAsMainButton(target *datamodels.Target) bool {
+	return target.ScanStatus == enums.TargetStatusReportGenerated && len(target.Scans) > 1
+}
+
+templ dsHeaderButtons(data CommonResultData) {
+	<div class="mx-2 mb-2">
+		<span class="d-block mt-3"><b>Note:</b> When you click "Make this as main" button, all the previous "fixed" alerts will be removed.</span>
+		if data.Target.CanMarkAsMain() {
+			<div>
+				<form
+					action="/targets/mark-as-main"
+					method="POST"
+					class="d-inline-block mx-1"
+					onsubmit="return confirm('Sure you want to mark this as main?');"
+				>
+					<input type="hidden" name="target_id" value={ data.Target.ID.Hex() }/>
+					if canShowMarkAsMainButton(data.Target) {
+						<button type="submit" class="btn btn-primary">
+							Make this as
+							main
+						</button>
+					} else {
+						<button type="submit" class="btn btn-primary disabled">
+							Make this as
+							main
+						</button>
+					}
+				</form>
+				if data.Target.CanRescan() {
+					<button
+						class="btn btn-primary"
+						data-toggle="modal"
+						data-target="#rescanModal"
+					>Rescan</button>
+				} else {
+					<button
+						class="btn btn-primary disabled"
+						data-toggle="modal"
+						data-target="#rescanModal"
+					>Rescan</button>
+				}
+				<a href={ templ.SafeURL(fmt.Sprintf("/targets/%s/ds-results/export", data.Target.ID.Hex())) } class="btn btn-primary float-end">
+					Export
+					Alerts
+				</a>
+			</div>
+		}
+		<span class="d-block mt-3"><b>Note:</b> Click the alert title to view the details</span>
+	</div>
+}
+
+templ alertList(title string, entries []datamodels.ScanResult, metaData CommonResultData, opts alertsDivOpts) {
+	if len(entries) > 0 {
+		<div class="card mb-2">
+			<div class="card-header bg-secondary">
+				<h5>{ title }</h5>
+			</div>
+			<div class="card-body">
+				<div class="card p-2">
+					<div class="accordion col-lg-12">
+						for _, entry := range entries {
+							@alertDetailsDiv(entry, metaData, alertDetailsHeader(entry, opts))
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+templ alertDetailsHeader(entry datamodels.ScanResult, opts alertsDivOpts) {
+	<div class="card-header">
+		if opts.showAddToBugTrack {
+			<a
+				class="btn btn-sm btn-primary"
+				href={ templ.SafeURL(
+                fmt.Sprintf(
+                    "/bug-track/add-from-scanresult?target_id=%s&alert_id=%s&is_ds=%s", 
+                    entry.TargetID.Hex(), 
+                    entry.ID.Hex(),
+                    strconv.FormatBool(opts.isDS),
+                    )) }
+			>
+				Add To BugTrack
+			</a>
+		}
+		if opts.showFlagBtns {
+			<div class="float-end">
+				<a
+					class="btn btn-sm btn-primary update-alert-status"
+					data-target-id={ entry.TargetID.Hex() }
+					data-alert-id={ entry.ID.Hex() }
+					data-flag={ strconv.Itoa(int(enums.AlertFalsePositive)) }
+				>
+					Mark FP
+				</a>
+				<a
+					class="btn btn-sm btn-primary update-alert-status"
+					data-target-id={ entry.TargetID.Hex() }
+					data-alert-id={ entry.ID.Hex() }
+					data-flag={ strconv.Itoa(int(enums.AlertIgnored)) }
+				>
+					Mark Ignore
+				</a>
+			</div>
+		}
+	</div>
+}
+
+templ alertDetailsDiv(entry datamodels.ScanResult, metaData CommonResultData, header templ.Component) {
+	<div class="mt-1">
+		<div
+			title="View Details"
+			class={ "card-header","collapsed", services.GetBgClassBySeverity(entry.Severity) }
+			data-toggle="collapse"
+			data-coreui-toggle="collapse"
+			data-coreui-target={ fmt.Sprintf("#collapse_%s", entry.ID.Hex()) }
+			aria-expanded="true"
+			aria-controls="collapseExample"
+		>
+			<span class=""><b>{ entry.VulnerabilityTitle }</b></span>
+			<span class="accicon"><i class="fa fa-angle-down rotate-icon"></i></span>
+		</div>
+		<div id={ fmt.Sprintf("collapse_%s", entry.ID.Hex()) } class="collapse">
+			@header
+			<div class="">
+				<div class="">
+					<div class="border-bottom">
+						<div class="row border-bottom mb-3">
+							<div class="col col-lg-3">
+								Vulnerability Description
+							</div>
+							<div class="col col-lg-9">
+								if len(entry.Finding)  > 0 {
+									<textarea
+										class="non-editable-text-area"
+										rows={ strconv.Itoa(calculateTextAreaRow(entry.Finding)) }
+										readonly
+									>{ entry.Finding }</textarea>
+								}
+							</div>
+						</div>
+						<div class="row border-bottom mb-3">
+							<div class="col col-lg-3">
+								Severity
+							</div>
+							<div class="col col-lg-9">
+								{ enums.SeverityToString(entry.Severity) }
+							</div>
+						</div>
+						if len(entry.Evidence) > 0 {
+							<div class="row border-bottom mb-3">
+								<div class="col col-lg-3">
+									Evidence
+								</div>
+								<div class="col col-lg-9">
+									{ entry.Evidence }
+								</div>
+							</div>
+						}
+						if entry.NSData !=nil {
+							if len(entry.NSData.IP) > 0 {
+								<div class="row border-bottom mb-3">
+									<div class="col col-lg-3">
+										Host
+									</div>
+									<div class="col col-lg-9">
+										{ entry.NSData.IP }
+									</div>
+								</div>
+							}
+						}
+						<div class="row border-bottom mb-3">
+							<div class="col col-lg-3">
+								CVSS Score
+							</div>
+							<div class="col col-lg-9">
+								{ strconv.FormatFloat(entry.Classification.CVSSScore, 'f', 1, 64) }
+							</div>
+						</div>
+						if entry.Classification.CVSSMetrics !="" {
+							<div class="row border-bottom mb-3">
+								<div class="col col-lg-3">
+									CVSS Metrics
+								</div>
+								<div class="col col-lg-9">{ entry.Classification.CVSSMetrics }</div>
+							</div>
+						}
+						if len(entry.Classification.CVEID) > 0 {
+							<div class="row border-bottom mb-3">
+								<div class="col col-lg-3">
+									CVE
+								</div>
+								<div class="col col-lg-9">
+									{ helpers.ConvertJSONToString(entry.Classification.CVEID) }
+								</div>
+							</div>
+						}
+						// if len(entry.Classification.CWEID) > 0 {
+						// 	<div class="row border-bottom mb-3">
+						// 		<div class="col col-lg-3">
+						// 			CVE
+						// 		</div>
+						// 		<div class="col col-lg-9">
+						// 			{ helpers.ConvertJSONToString(entry.Classification.CWEID) }
+						// 		</div>
+						// 	</div>
+						// }
+						if entry.Cause != "" {
+							<div class="row border-bottom mb-3">
+								<div class="col col-lg-3">
+									if entry.Effect != "" {
+										Cause
+									} else {
+										Cause and Effect
+									}
+								</div>
+								<div class="col col-lg-9">
+									{ entry.Cause }
+								</div>
+							</div>
+						}
+						if entry.Effect != "" {
+							<div class="row border-bottom mb-3">
+								<div class="col col-lg-3">
+									Effect
+								</div>
+								<div class="col col-lg-9">
+									{ entry.Effect }
+								</div>
+							</div>
+						}
+						if entry.WSData != nil {
+							if entry.WSData.URL != "" {
+								<div class="row border-bottom mb-3">
+									<div class="col col-lg-3">
+										URL
+									</div>
+									<div class="col col-lg-9">
+										{ entry.WSData.URL }
+									</div>
+								</div>
+							}
+							if entry.WSData.Param != "" {
+								<div class="row border-bottom mb-3">
+									<div class="col col-lg-3">
+										Parameters
+									</div>
+									<div class="col col-lg-9">
+										{ entry.WSData.Param }
+									</div>
+								</div>
+							}
+							if entry.WSData.Payload != "" {
+								<div class="row border-bottom mb-3">
+									<div class="col col-lg-3">
+										Payload
+									</div>
+									<div class="col col-lg-9">
+										{ entry.WSData.Payload }
+									</div>
+								</div>
+							}
+							if entry.WSData.Instances != "" {
+								<div class="row border-bottom mb-3">
+									<div class="col col-lg-3">
+										Instances
+									</div>
+									<div class="col col-lg-9">
+										{ entry.WSData.Instances }
+									</div>
+								</div>
+							}
+							if entry.WSData.Other != "" {
+								<div class="row border-bottom mb-3">
+									<div class="col col-lg-3">
+										Additional Details
+									</div>
+									<div class="col col-lg-9">
+										{ entry.WSData.Other }
+									</div>
+								</div>
+							}
+						}
+						if entry.NSData !=nil {
+							if entry.NSData.Port != "" {
+								<div class="row border-bottom mb-3">
+									<div class="col col-lg-3">
+										Port
+									</div>
+									<div class="col col-lg-9">
+										{ entry.NSData.Port }
+									</div>
+								</div>
+							}
+							if entry.NSData.SpecificResult != "" {
+								<div class="row border-bottom mb-3">
+									<div class="col col-lg-3">
+										Additional Details
+									</div>
+									<div class="col col-lg-9">
+										{ entry.NSData.SpecificResult }
+									</div>
+								</div>
+							}
+							if entry.NSData.Affected != "" {
+								<div class="row border-bottom mb-3">
+									<div class="col col-lg-3">
+										Affected
+									</div>
+									<div class="col col-lg-9">
+										{ entry.NSData.Affected }
+									</div>
+								</div>
+							}
+						}
+						<div class="row border-bottom mb-3">
+							<div class="col col-lg-3">
+								Remediation
+							</div>
+							<div class="col col-lg-9">
+								if entry.Remediation != "" {
+									<textarea
+										class="non-editable-text-area"
+										rows={ strconv.Itoa(calculateTextAreaRow(entry.Remediation)) }
+										readonly
+									>{ entry.Remediation }</textarea>
+								} else {
+									<textarea
+										class="non-editable-text-area"
+										rows={ strconv.Itoa(metaData.NumberOfTARowsForDefaultRemediation) }
+										readonly
+									>{ metaData.DefaultRemediation }</textarea>
+								}
+							</div>
+						</div>
+						if len(entry.Reference) > 0 {
+							<div class="row border-bottom mb-3">
+								<div class="col col-lg-3">
+									References
+								</div>
+								<div class="col col-lg-9">
+									<ul>
+										for _, v := range entry.Reference {
+											<li>{ v }</li>
+										}
+									</ul>
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ rescanModal(targetID string) {
+	<div
+		class="modal fade"
+		id="rescanModal"
+		tabindex="-1"
+		role="dialog"
+		aria-labelledby="rescanModalLabel"
+		aria-hidden="true"
+	>
+		<div class="modal-dialog modal-dialog-centered" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Confirmation!</h5>
+					<button type="button" class="close btn" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<p>
+						Please conduct the revalidation scan only after applying all necessary security fixes to ensure
+						maximum efficiency.
+					</p>
+					<p>Please ensure all FP and Ignores are already marked</p>
+					<h5 class="text-danger">Would you like to proceed with the scan now?</h5>
+				</div>
+				<div class="modal-footer">
+					<form action="/targets/rescan" method="POST">
+						<input type="hidden" name="target_id" value={ targetID }/>
+						<button type="submit" class="btn btn-primary">Scan Now</button>
+					</form>
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}

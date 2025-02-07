@@ -1,0 +1,19 @@
+package alertspages
+
+import (
+	"github.com/CSPF-Founder/iva/panel/models/datamodels"
+	"github.com/CSPF-Founder/iva/panel/views/helpers"
+	"strconv"
+)
+
+templ ListResults(data CommonResultData, alertsData []datamodels.ScanResult) {
+	@commonHeader(data)
+	<input type="hidden" id="no_vulnerabilities" value={ strconv.Itoa(data.VulnerabilityStats.NoVulnerabilities) }/>
+	<input type="hidden" id="overall_cvss_score" value={ strconv.FormatFloat(data.OverallCVSSScore, 'f', 1, 64) }/>
+	@statsDiv(data)
+	<div class="row pt-3 p-4">
+		// Alert Lists
+		@alertList("Alerts", alertsData, data, alertsDivOpts{showAddToBugTrack: true})
+	</div>
+	<script type="module" src={ helpers.AssetPath("app/scan_result.js") }></script>
+}

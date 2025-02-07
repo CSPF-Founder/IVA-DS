@@ -1,0 +1,109 @@
+services:
+  mariadb:
+    image: mariadb:11.4.4
+    container_name: mariadb
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: "[ROOT_PASS_TO_REPLACE]"
+      MARIADB_USER: "iva"
+      MARIADB_PASSWORD: "[PASSWORD_TO_REPLACE]"
+      MARIADB_DATABASE: "iva_db"
+    volumes:
+      - ./volumes/db/mariadb:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3306:3306"
+      
+  mongodb:
+    container_name: mongodb
+    image: mongo:4.4.18
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "root"
+      MONGO_INITDB_ROOT_PASSWORD: "[ROOT_PASS_TO_REPLACE]"
+    volumes:
+      - ./volumes/db/mongodb:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"
+
+  ns:
+    image: immauss/openvas:25.01.01
+    container_name: ns
+    restart: unless-stopped
+    cpus: "2"
+    mem_limit: 6g
+    ports:
+      - "127.0.0.1:9392:9392"
+      - "127.0.0.1:9390:9390"
+    environment:
+      - GMP=9390
+      - PASSWORD=[GMP_PASSWORD_TO_REPLACE]
+    volumes:
+      - /app/iva/data/ns/local-etc/:/data/local-etc/
+
+  ws:
+    image: zaproxy/zap-stable:2.16.0
+    container_name: ws
+    restart: unless-stopped
+    cpus: "1.5"
+    mem_limit: 3g
+    ports:
+      - "127.0.0.1:8080:8080"
+    entrypoint:
+      - zap.sh
+    command:
+      - -daemon
+      - -host
+      - 0.0.0.0
+      - -port
+      - "8080"
+      - -config
+      - api.addrs.addr.name=.*
+      - -config
+      - api.addrs.addr.regex=true
+      - -config
+      - api.key=[API_KEY]
+
+  panel:
+    build:
+      context: panelfiles
+    depends_on:
+      - mariadb
+      - mongodb
+    restart: always
+    container_name: panel
+    environment:
+      DATABASE_URI: iva:[PASSWORD_TO_REPLACE]@(mariadb:3306)/iva_db?charset=utf8mb4&parseTime=True&loc=Local
+      COPYRIGHT_FOOTER_COMPANY: Cyber Security and Privacy Foundation 
+      
+      PRODUCT_TITLE: IVA Scanner
+      USE_DOTENV: "false"
+      SERVER_ADDRESS: 0.0.0.0:443
+      DBMS_TYPE: mysql
+      WORK_DIR: /app/data/work_dir/
+      # The temp_uploads should be in the same device as the WORK_DIR(or docker gives invalid-cross)
+      TEMP_UPLOADS_DIR: /app/data/temp_uploads/
+
+      MIGRATIONS_PREFIX: db
+      #Log config: debug, info, warn, error, fatal, panic
+      LOG_LEVEL: info
+      # TLS configuration
+      USE_TLS: "true"
+      CERT_PATH: /app/panel/certs/panel.crt
+      KEY_PATH: /app/panel/certs/panel.key
+
+      MONGO_DATABASE_URI: "mongodb://root:[ROOT_PASS_TO_REPLACE]@mongodb:27017/iva_data?authSource=admin&authMechanism=SCRAM-SHA-256"
+      MONGO_DATABASE_NAME: iva_data
+
+      REPORT_DIR: /app/data/reports
+      FEED_URL: "rsync://localhost/feed"
+      FEED_CONNECTION_CHECK_TIMEOUT: 1200
+ 
+
+    user: "1000" # UPDATE accordingly -  host user id of `iva`
+    volumes:
+      - /app/iva/data/:/app/data/
+      - /app/iva/panel/certs/:/app/panel/certs/
+      - /app/iva/panel/frontend/external/:/app/panel/frontend/external/
+
+    ports:
+      - "443:443"

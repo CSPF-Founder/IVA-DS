@@ -1,0 +1,108 @@
+package btpages
+
+import (
+	"fmt"
+	"github.com/CSPF-Founder/iva/panel/models"
+	"github.com/CSPF-Founder/iva/panel/views/helpers"
+	"strconv"
+)
+
+func bugIDToHTMLID(id uint64) string {
+	return "bugtrack_row_" + strconv.FormatUint(id, 10)
+}
+
+templ BugtrackList(pageTitle string, data []models.BugTrack) {
+	<div class="row pt-3">
+		<div class="col-lg-12 col-sm-12 pb-3 fpt14">
+			<h3 class="font-weight-bold">{ pageTitle }</h3>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-12">
+			<div class="card mb-4">
+				<div class="card-header">
+					<div class="row">
+						<div class="col-6 pt-3">
+							<button type="button" id="export-button" class="btn btn-primary">
+								<b>Export Bugs</b>
+							</button>
+						</div>
+					</div>
+				</div>
+				<div class="card-body">
+					<div class="example">
+						<ul class="nav nav-underline" role="tablist">
+							<li class="nav-item">
+								<a class="nav-link active" data-coreui-toggle="tab" href="#" role="tab">
+									<svg class="icon me-2">
+										<use
+											xlink:href="/resources/new-theme/vendor/@coreui/icons/svg/free.svg#cil-media-play"
+										></use>
+									</svg>Bug List
+								</a>
+							</li>
+						</ul>
+						<div class="tab-content rounded-bottom">
+							<div class="tab-pane p-3 active preview" role="tabpanel" id="bugtrack-div">
+								<table id="bugtrack-table" class="table table-striped table-hover table-responsive-sm">
+									<thead>
+										<tr>
+											<th>Url/IP/Application</th>
+											<th>Alert Title</th>
+											<th>Severity</th>
+											<th>Status</th>
+											<th>Found Date</th>
+											<th>Revalidated Date</th>
+											<th width="20%">Action</th>
+										</tr>
+									</thead>
+									<tbody>
+										for _, entry := range data {
+											<tr class="dt-table-root-row" data-id={ strconv.FormatUint(entry.ID, 10) } id={ bugIDToHTMLID(entry.ID) }>
+												<td class="text-left w-25" data-toggle="tooltip" title={ entry.Target }>
+													<div class="dsc">
+														{ entry.Target }
+													</div>
+												</td>
+												<td
+													class="w-25 text-left wrapped-column"
+													data-toggle="tooltip"
+													title={ entry.AlertTitle }
+												>
+													<div class="dsc">
+														{ entry.AlertTitle }
+													</div>
+												</td>
+												<td>{ entry.SeverityText }</td>
+												<td>{ entry.StatusText }</td>
+												<td>{ entry.FormatedFoundDate }</td>
+												<td>{ entry.FormatedRevalidatedDate }</td>
+												<td>
+													<a
+														title="Details"
+														class="btn btn-sm btn-primary m-1"
+														href={ templ.SafeURL(fmt.Sprintf("/bug-track/%d", entry.ID)) }
+													>
+														Details
+													</a>
+													<button
+														title="Delete entry"
+														data-id={ strconv.FormatUint(entry.ID, 10) }
+														class="btn btn-sm btn-danger delete-entry text-white m-1"
+													>
+														Delete
+													</button>
+												</td>
+											</tr>
+										}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script type="module" src={ helpers.AssetPath("app/bug_track.js") }></script>
+}

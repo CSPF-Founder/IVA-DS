@@ -1,0 +1,32 @@
+package alertspages
+
+import (
+	"github.com/CSPF-Founder/iva/panel/models/datamodels"
+	"github.com/CSPF-Founder/iva/panel/views/helpers"
+	"strconv"
+)
+
+// data to embed in template for Single IP/URL
+type DSSingleTargetData struct {
+	Unfixed []datamodels.ScanResult
+	Fixed   []datamodels.ScanResult
+	Ignored []datamodels.ScanResult
+	FP      []datamodels.ScanResult
+}
+
+templ DSListResults(data CommonResultData, alertsData DSSingleTargetData) {
+	@commonHeader(data)
+	<input type="hidden" id="no_vulnerabilities" value={ strconv.Itoa(data.VulnerabilityStats.NoVulnerabilities) }/>
+	<input type="hidden" id="overall_cvss_score" value={ strconv.FormatFloat(data.OverallCVSSScore, 'f', 1, 64) }/>
+	@statsDiv(data)
+	<div class="row pt-3 p-4">
+		@dsHeaderButtons(data)
+		// Alert Lists
+		@alertList("Unfixed Alerts", alertsData.Unfixed, data, alertsDivOpts{isDS: true, showFlagBtns: true, showAddToBugTrack: true})
+		@alertList("Fixed Alerts", alertsData.Fixed, data, alertsDivOpts{isDS: true})
+		@alertList("Ignored Alerts", alertsData.Ignored, data, alertsDivOpts{isDS: true})
+		@alertList("False Positive", alertsData.FP, data, alertsDivOpts{isDS: true})
+	</div>
+	@rescanModal(data.Target.ID.Hex())
+	<script type="module" src={ helpers.AssetPath("app/scan_result.js") }></script>
+}

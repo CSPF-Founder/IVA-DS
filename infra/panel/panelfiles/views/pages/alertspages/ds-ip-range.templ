@@ -1,0 +1,41 @@
+package alertspages
+
+import (
+	"fmt"
+	"github.com/CSPF-Founder/iva/panel/models/datamodels"
+	"github.com/CSPF-Founder/iva/panel/views/helpers"
+	"strconv"
+)
+
+// data to embed in template for IP Range
+type DSMultiTargetData struct {
+	Unfixed map[string][]datamodels.ScanResult
+	Fixed   map[string][]datamodels.ScanResult
+	Ignored map[string][]datamodels.ScanResult
+	FP      map[string][]datamodels.ScanResult
+}
+
+templ DSListIPRangeResults(data CommonResultData, alertsData DSMultiTargetData) {
+	@commonHeader(data)
+	<input type="hidden" id="no_vulnerabilities" value={ strconv.Itoa(data.VulnerabilityStats.NoVulnerabilities) }/>
+	<input type="hidden" id="overall_cvss_score" value={ strconv.FormatFloat(data.OverallCVSSScore, 'f', 1, 64) }/>
+	@statsDiv(data)
+	<div class="row pt-3 p-4">
+		@dsHeaderButtons(data)
+		// Alert Lists
+		for ip, alertsData := range alertsData.Unfixed {
+			@alertList(fmt.Sprintf("Unfixed Alerts for IP:%s", ip), alertsData, data, alertsDivOpts{showAddToBugTrack: true, isDS: true, showFlagBtns: true})
+		}
+		for ip, alertsData := range alertsData.Fixed {
+			@alertList(fmt.Sprintf("Fixed Alerts for IP:%s", ip), alertsData, data, alertsDivOpts{isDS: true})
+		}
+		for ip, alertsData := range alertsData.Ignored {
+			@alertList(fmt.Sprintf("Ignored Alerts for IP:%s", ip), alertsData, data, alertsDivOpts{isDS: true})
+		}
+		for ip, alertsData := range alertsData.FP {
+			@alertList(fmt.Sprintf("False Positive for IP:%s", ip), alertsData, data, alertsDivOpts{isDS: true})
+		}
+	</div>
+	@rescanModal(data.Target.ID.Hex())
+	<script type="module" src={ helpers.AssetPath("app/scan_result.js") }></script>
+}

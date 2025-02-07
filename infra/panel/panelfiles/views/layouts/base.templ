@@ -1,0 +1,37 @@
+package layouts
+
+import (
+	"github.com/CSPF-Founder/iva/panel/views/components"
+	"github.com/CSPF-Founder/iva/panel/views/helpers"
+)
+
+templ BaseLayout(content templ.Component, data helpers.BaseData) {
+	<!DOCTYPE html>
+	<html lang="en">
+		@components.HtmlHead(&data)
+		<body>
+			@components.SideBar()
+			<div class="wrapper d-flex flex-column min-vh-100 bg-light bg-opacity-50 dark:bg-transparent">
+				@components.Header(data.ProductTitle)
+				@components.AppMsgBox()
+				<div id="content" class="body flex-grow-1 px-3">
+					@components.FlashMessage(data.Flashes)
+					@content
+				</div>
+				@components.Footer(data.CurrentYear, data.CopyrightFooterCompany)
+			</div>
+			@components.FooterScritps()
+		</body>
+	</html>
+}
+
+// Layout without sidebar, header and footer
+templ PlainBodyLayout(content templ.Component, data helpers.BaseData) {
+	<!DOCTYPE html>
+	<html lang="en">
+		@components.HtmlHead(&data)
+		<body>
+			@content
+		</body>
+	</html>
+}

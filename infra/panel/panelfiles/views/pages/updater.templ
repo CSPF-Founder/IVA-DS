@@ -1,0 +1,48 @@
+package pages
+
+import "github.com/CSPF-Founder/iva/panel/views/helpers"
+
+type UpdateInfo struct {
+	ColorStatus string
+	Status      string
+	LastUpdate  string
+	Updating    bool
+}
+
+templ Updater(data UpdateInfo) {
+	<div class="row">
+		<div class="col-lg-5 col-sm-10 col-12 ">
+			<div class="card mb-4">
+				<div class="card-header bg-secondary text-black ">
+					<div class="row">
+						<div class="col-lg-10">
+							<h5>Feed Status</h5>
+						</div>
+						<div class="col-lg-2">
+							<button type="submit" id="update-button" class="btn btn-sm btn-primary">Update</button>
+						</div>
+					</div>
+				</div>
+				<div class="card-body p-4">
+					<p id="update-status">
+						Update Status:
+						<span class={ "ms-2","px-2", data.ColorStatus }>
+							if data.Status == "" {
+								--
+							} else {
+								{ data.Status }
+							}
+						</span>
+					</p>
+					<p id="last-updated">Last Updated: <span class="ms-2">{ data.LastUpdate }</span></p>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script type="module" src={ helpers.AssetPath("app/updater.js") }></script>
+	@templ.JSONScript("updater-state", struct {
+		IsUpdating bool
+	}{
+		IsUpdating: data.Updating,
+	})
+}
